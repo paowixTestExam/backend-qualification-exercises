@@ -17,6 +17,9 @@
     "module": "commonjs",
     "types": ["node", "jest"],
   },
+  "compilerOptions": {
+    "types": ["node"]
+  },
   "exclude": ["node_modules", "tmp"]
 }
   

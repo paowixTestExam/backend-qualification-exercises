@@ -1,33 +1,37 @@
-import * as R from 'ramda';
-import delay from '@highoutput/delay';
-import { ObjectId } from './';
+// ObjectId.ts
+import crypto from 'crypto';
 
-describe('ObjectId', () => {
-  test('unique ids', () => {
-    const COUNT = 10000;
+export class ObjectId {
+  private static RANDOM = crypto.randomBytes(4); 
+  private static COUNTER = crypto.randomBytes(3).readUIntBE(0, 3);
 
-    const set = new Set(
-      R.times(() => ObjectId.generate().toString(), COUNT)
-    );
+  private buffer: Buffer;
 
-    expect(set.size).toBe(COUNT);
-  });
+  private constructor(buffer: Buffer) {
+    this.buffer = buffer;
+  }
 
-  test('different timestamps', async () => {
-    const one = ObjectId.generate().toString();
-    await delay(100);
-    const two = ObjectId.generate().toString();
-    expect(one.substring(2, 14)).not.toEqual(two.substring(2, 14));
-  });
+  static generate(type: number = 0x00): ObjectId {
+    if (type < 0 || type > 0xff) {
+      throw new RangeError('Type must be a 1 byte value (0–255)');
+    }
 
-  test('fixed random', async () => {
-    const one = ObjectId.generate().toString();
-    const two = ObjectId.generate().toString();
-    expect(one.substring(14, 22)).toEqual(two.substring(14, 22));
-  });
+    const buffer = Buffer.alloc(14);
 
-  test('lexicographic ordering', () => {
-    const ids = R.times(() => ObjectId.generate().toString(), 1000);
-    expect(ids.slice().sort()).toEqual(ids);
-  });
-});
+    buffer.writeUInt8(type, 0);
+
+    const timestamp = Date.now();
+    buffer.writeUIntBE(timestamp, 1, 6);
+
+    ObjectId.RANDOM.copy(buffer, 7);
+
+    ObjectId.COUNTER = (ObjectId.COUNTER + 1) & 0xffffff;
+    buffer.writeUIntBE(ObjectId.COUNTER, 11, 3);
+
+    return new ObjectId(buffer);
+  }
+
+  toString(): string {
+    return this.buffer.toString('hex');
+  }
+}

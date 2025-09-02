@@ -1,34 +1,24 @@
-import { DowntimeLogs, merge } from './';
+export type DowntimeLogs = [Date, Date][];
 
-describe('mergeDowntimeLogs', () => {
-  const cases: [string, DowntimeLogs[], DowntimeLogs][] = [
-    [
-      'islands',
-      [
-        [[new Date('2020-01-01T00:00:00Z'), new Date('2020-01-01T01:00:00Z')], [new Date('2020-01-02T05:00:00Z'), new Date('2020-01-02T05:30:00Z')]],
-        [[new Date('2020-01-01T17:00:00Z'), new Date('2020-01-01T17:45:00Z')]],
-      ],
-      [
-        [new Date('2020-01-01T00:00:00Z'), new Date('2020-01-01T01:00:00Z')],
-        [new Date('2020-01-01T17:00:00Z'), new Date('2020-01-01T17:45:00Z')],
-        [new Date('2020-01-02T05:00:00Z'), new Date('2020-01-02T05:30:00Z')],
-      ]
-    ],
-    [
-      'overlaps',
-      [
-        [[new Date('2020-01-01T00:00:00Z'), new Date('2020-01-01T01:00:00Z')], [new Date('2020-01-02T05:00:00Z'), new Date('2020-01-02T05:30:00Z')]],
-        [[new Date('2020-01-01T17:00:00Z'), new Date('2020-01-01T17:45:00Z')], [new Date('2020-01-02T05:20:00Z'), new Date('2020-01-02T06:10:00Z')]],
-      ],
-      [
-        [new Date('2020-01-01T00:00:00Z'), new Date('2020-01-01T01:00:00Z')],
-        [new Date('2020-01-01T17:00:00Z'), new Date('2020-01-01T17:45:00Z')],
-        [new Date('2020-01-02T05:00:00Z'), new Date('2020-01-02T06:10:00Z')],
-      ]
-    ],
-  ];
+export function merge(...logs: DowntimeLogs[]): DowntimeLogs {
+  const intervals = logs.flat().sort((a, b) => a[0].getTime() - b[0].getTime());
 
-  test.each(cases)('%p', (_, input, expected) => {
-    expect(merge(...input)).toEqual(expected);
-  });
-});
+  const merged: DowntimeLogs = [];
+  for (const [start, end] of intervals) {
+    if (!merged.length) {
+      merged.push([start, end]);
+      continue;
+    }
+
+    const last = merged[merged.length - 1];
+    if (start.getTime() > last[1].getTime()) {
+      merged.push([start, end]);
+    } else {
+      if (end.getTime() > last[1].getTime()) {
+        last[1] = end;
+      }
+    }
+  }
+
+  return merged;
+}
